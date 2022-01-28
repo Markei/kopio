@@ -5,6 +5,25 @@
     "egulias/email-validator": {
         "version": "2.1.25"
     },
+    "league/flysystem": {
+        "version": "2.4.0"
+    },
+    "league/flysystem-bundle": {
+        "version": "1.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "master",
+            "version": "1.0",
+            "ref": "913dc3d7a5a1af0d2b044c5ac3a16e2f851d7380"
+        },
+        "files": [
+            "config/packages/flysystem.yaml",
+            "var/storage/.gitignore"
+        ]
+    },
+    "league/mime-type-detection": {
+        "version": "1.9.0"
+    },
     "lorenzo/pinky": {
         "version": "1.0.5"
     },
@@ -167,6 +186,9 @@
         "files": [
             "./config/packages/notifier.yaml"
         ]
+    },
+    "symfony/options-resolver": {
+        "version": "v5.3.14"
     },
     "symfony/polyfill-intl-grapheme": {
         "version": "v1.22.0"
