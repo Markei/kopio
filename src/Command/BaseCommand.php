@@ -33,23 +33,23 @@ abstract class BaseCommand extends Command
     protected $messageSenderFactory;
     protected $logger;
     protected $sleepTime;
-    protected $teamsDsn;
-    protected $mailSender;
-    protected $mailReceiver;
+    protected $summaryTeamsDsn;
+    protected $summaryMailSender;
+    protected $summaryMailReceiver;
     protected $mailer;
     protected $startTime;
     protected $endTime;
     protected $jobType;
 
-    public function __construct(MessageSenderFactory $messageSenderFactory, LoggerInterface $logger, int $sleepTime, string $teamsDsn, string $mailSender, string $mailReceiver, MailerInterface $mailer)
+    public function __construct(MessageSenderFactory $messageSenderFactory, LoggerInterface $logger, int $sleepTime, string $summaryTeamsDsn, string $summaryMailSender, string $summaryMailReceiver, MailerInterface $mailer)
     {
         parent::__construct();
-        $this->messageSenderFactory = $messageSenderFactory; 
+        $this->messageSenderFactory = $messageSenderFactory;
         $this->logger = $logger;
         $this->sleepTime = $sleepTime;
-        $this->teamsDsn = $teamsDsn;
-        $this->mailSender = $mailSender;
-        $this->mailReceiver = $mailReceiver;
+        $this->summaryTeamsDsn = $summaryTeamsDsn;
+        $this->summaryMailSender = $summaryMailSender;
+        $this->summaryMailReceiver = $summaryMailReceiver;
         $this->mailer = $mailer;
         $this->startTime = null;
         $this->endTime = null;
@@ -80,7 +80,7 @@ abstract class BaseCommand extends Command
             $parsedFile = Yaml::parseFile($file->getRealPath());
 
             $backupJob = null;
-            
+
             if (isset($parsedFile['mariadb'])) {
                 $output->writeln('Starting action for MySQL/MariaDB with profile: ' . $parsedFile['mariadb']['name']);
                 $backupJob = new MySqlBackup($parsedFile['mariadb']['name'], 'Backup', $parsedFile['mariadb']['source'], $parsedFile['mariadb']['target']['filesystem'] . DIRECTORY_SEPARATOR . $parsedFile['mariadb']['name'], strval($parsedFile['mariadb']['retention']['simple']['days']));
@@ -108,45 +108,45 @@ abstract class BaseCommand extends Command
             } else {
                 $succeedJobs[] = $backupJob;
             }
-            
+
             sleep($this->sleepTime);
         }
-       
+
         $this->endTime = new DateTime();
 
         $message = PHP_EOL . 'Report Kopio run ' . $this->startTime->format('d-m-Y') . ' - ' . $this->endTime->format('d-m-Y') . ' on ' . gethostname() . PHP_EOL;
         $message .= PHP_EOL . 'run type: ' . $this->jobType . PHP_EOL;
         $message .= count($succeedJobs) . ' successfull ' . count($failedJobs) . ' failed' . PHP_EOL;
         $message .= PHP_EOL . 'Failed profiles:' . PHP_EOL;
-        
+
         foreach ($failedJobs as $job) {
-            $message .=  PHP_EOL . $job->getName() . PHP_EOL; 
+            $message .= PHP_EOL . $job->getName() . PHP_EOL;
         }
-        
+
         $message .= PHP_EOL . 'Succeed profiles:' . PHP_EOL;
 
         foreach ($succeedJobs as $job) {
-            $message .= PHP_EOL . $job->getName() . PHP_EOL; 
+            $message .= PHP_EOL . $job->getName() . PHP_EOL;
         }
- 
+
         if (!empty($failedJobs)) {
             $output->writeln(PHP_EOL . 'Failed to create ' . count($failedJobs) . ' of ' . $totalJobs .' backups:');
-            
+
             $count = 1;
             foreach ($failedJobs as $job) {
                 $output->writeln($count . ' [' . $job->getType() . '] ' . $job->getName() . ' failed with exception: ' . $job->getException()->getMessage());
                 $count = $count + 1;
             }
-            
+
             $this->sendTeamsMessage($message);
             $this->sendEmail($message);
-           
+
             return Command::FAILURE;
         }
 
         $this->sendTeamsMessage($message);
         $this->sendEmail($message);
-        
+
         return Command::SUCCESS;
     }
 
@@ -154,34 +154,34 @@ abstract class BaseCommand extends Command
 
     protected function sendTeamsMessage(string $message): void
     {
-        $microsoftTransport = new MicrosoftTeamsTransport($this->teamsDsn);
-        
-        $channel = new ChatChannel($microsoftTransport);
-        $notifier = new Notifier(['chat' => $channel]);
-
-        $notification = new Notification($message, ['chat']);
-        
         try {
+            $microsoftTransport = new MicrosoftTeamsTransport($this->summaryTeamsDsn);
+
+            $channel = new ChatChannel($microsoftTransport);
+            $notifier = new Notifier(['chat' => $channel]);
+
+            $notification = new Notification($message, ['chat']);
+
             $notifier->send($notification);
         } catch (\Exception $e) {
-            $this->logger->error($e);
+            $this->logger->notice($e->getMessage());
         }
     }
 
     protected function sendEmail($message): void
     {
-        $email = (new Email())
-            ->from($this->mailSender)
-            ->to($this->mailReceiver)
-            ->priority(Email::PRIORITY_HIGH)
-            ->subject('Backup summary')
-            ->text($message)
-        ;
-
         try {
+            $email = (new Email())
+                ->from($this->summaryMailSender)
+                ->to($this->summaryMailReceiver)
+                ->priority(Email::PRIORITY_HIGH)
+                ->subject('Backup summary')
+                ->text($message)
+            ;
+
             $this->mailer->send($email);
         } catch (\Exception $e) {
-            $this->logger->error($e);
+            $this->logger->notice($e->getMessage());
         }
     }
 }

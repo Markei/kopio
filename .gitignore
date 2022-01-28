@@ -11,3 +11,4 @@ profiles/
 ###< symfony/framework-bundle ###
 
 sql-backups/
+todo

@@ -5,9 +5,10 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     sleepTime: '%env(int:SLEEPTIME)%'
-    teamsDsn: "%env(TEAMS_DSN)%"
-    mailSender: "%env(MAIL_SENDER)%"
-    mailReceiver: "%env(MAIL_RECEIVER)%"
+    mailSender: '%env(MAIL_SENDER)%'
+    summaryTeamsDsn: '%env(SUMMARY_TEAMS_DSN)%'
+    summaryMailSender: '%env(SUMMARY_MAIL_SENDER)%'
+    summaryMailReceiver: '%env(SUMMARY_MAIL_RECEIVER)%'
 
 services:
     # default configuration for services in *this* file
@@ -15,10 +16,11 @@ services:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
         bind:
-            $sleepTime: "%sleepTime%"
-            $teamsDsn: "%teamsDsn%"
-            $mailSender: "%mailSender%"
-            $mailReceiver: "%mailReceiver%"
+            $sleepTime: '%sleepTime%'
+            $mailSender: '%mailSender%'
+            $summaryTeamsDsn: '%summaryTeamsDsn%'
+            $summaryMailSender: '%summaryMailSender%'
+            $summaryMailReceiver: '%summaryMailReceiver%'
 
 
     # makes classes in src/ available to be used as services
