@@ -20,7 +20,10 @@ use Symfony\Component\Console\Input\InputArgument;
 use App\MessageSender;
 use App\MessageSenderFactory;
 use DateTime;
+use League\Flysystem\Filesystem;
+use League\Flysystem\Local\LocalFilesystemAdapter;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Notifier\Bridge\MicrosoftTeams\MicrosoftTeamsTransport;
@@ -170,6 +173,11 @@ abstract class BaseCommand extends Command
 
     protected function sendEmail($message): void
     {
+        $fileSystemAdapter = new LocalFilesystemAdapter('.');
+        $fileSystem = new Filesystem($fileSystemAdapter);
+        dd($fileSystem->listContents('./')->toArray());
+        // $fileSystem->listContents();
+
         try {
             $email = (new Email())
                 ->from($this->summaryMailSender)
