@@ -3,10 +3,12 @@
 declare(strict_types=1);
 namespace App\Command;
 
-use Symfony\Component\Console\Output\OutputInterface;
-use App\Backup\AbstractBackup;
-use App\MessageSender;
 use Psr\Log\LoggerInterface;
+
+use App\MessageSender;
+use App\Backup\AbstractBackup;
+
+use Symfony\Component\Console\Output\OutputInterface;
 
 class BackupCommand extends BaseCommand
 {
@@ -23,7 +25,7 @@ class BackupCommand extends BaseCommand
             $output->writeln('Checking if all information is defined in de yaml profiles file');
             $backupJob->verifyConfig();
 
-            if (!isset($parsedFile['scp'])) {
+            if (!isset($parsedFile['SCP'])) {
                 $output->writeln('Testing connecting source');
                 $backupJob->checkSource();
             }
@@ -36,23 +38,33 @@ class BackupCommand extends BaseCommand
             try {
                 $messageSender->sendSuccess();
             } catch (\Exception $e) {
-                $logger->error('ERROR: Failed sending notification with exception: '  . get_class($e) . ' and message ' . $e->getMessage(), ['profileName' =>  $backupJob->getName()]);
+                $logger->notice(
+                    '[ERROR] Failed sending notification with exception: ' . get_class($e) . ' and message ' . $e->getMessage(), ['profileName' =>  $backupJob->getName()]
+                );
             }
 
-            $logger->info('Succesfully created backups', ['profileName' =>  $backupJob->getName()]);
+            $logger->info(
+                '[SUCCESS] Succesfully created backups', ['profileName' => $backupJob->getName()]
+            );
 
             return true;
         } catch (\Exception $e) {
-           
-            $output->writeln('ERROR: there is an exception: '  . get_class($e) . ' with message ' . $e->getMessage());
-                       
+            $output->writeln(
+                PHP_EOL . '[ERROR] ' . get_class($e) .': ' . $e->getMessage()
+            );
+
             $backupJob->setException($e);
-            $logger->error('ERROR: Failed creating backup with exception: '  . get_class($e) . ' and message ' . $e->getMessage(), ['profileName' =>  $backupJob->getName()]);
+
+            $logger->notice(
+                '[ERROR] Failed creating backup with exception: ' . get_class($e) . ' and message ' . $e->getMessage(), ['profileName' => $backupJob->getName()]
+            );
 
             try {
                 $messageSender->sendFailure();
             } catch (\Exception $e) {
-                $logger->error('ERROR: Failed sending notification with exception: '  . get_class($e) . ' and message ' . $e->getMessage(), ['profileName' =>  $backupJob->getName()]);
+                $logger->notice(
+                    '[ERROR] Failed sending notification with exception: ' . get_class($e) . ' and message ' . $e->getMessage(), ['profileName' => $backupJob->getName()]
+                );
             }
 
             return false;

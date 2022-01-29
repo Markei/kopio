@@ -3,33 +3,34 @@
 declare(strict_types=1);
 namespace App\Command;
 
-use App\Backup\AbstractBackup;
-use App\Backup\LocalBackup;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Yaml\Yaml;
+use Psr\Log\LoggerInterface;
 
+use App\Backup\AbstractBackup;
+
+use App\Backup\LocalBackup;
 use App\Backup\MySqlBackup;
 use App\Backup\PostgreSqlBackup;
 use App\Backup\SCPBackup;
-use InvalidArgumentException;
+
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Yaml\Yaml;
 
 use App\MessageSender;
 use App\MessageSenderFactory;
-use DateTime;
-use League\Flysystem\Filesystem;
-use League\Flysystem\Local\LocalFilesystemAdapter;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
-use Symfony\Component\Notifier\Bridge\MicrosoftTeams\MicrosoftTeamsTransport;
+
 use Symfony\Component\Notifier\Channel\ChatChannel;
-use Symfony\Component\Notifier\Notification\Notification;
+use Symfony\Component\Notifier\Bridge\MicrosoftTeams\MicrosoftTeamsTransport;
+
 use Symfony\Component\Notifier\Notifier;
+use Symfony\Component\Notifier\Notification\Notification;
+
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Mailer\MailerInterface;
 
 abstract class BaseCommand extends Command
 {
@@ -75,33 +76,84 @@ abstract class BaseCommand extends Command
         $failedJobs = [];
         $succeedJobs= [];
 
-        $this->startTime = new DateTime();
+        $this->startTime = new \DateTime();
 
         foreach ($files as $file) {
             $totalJobs = $totalJobs + 1;
+
             $output->writeln(PHP_EOL .'Parsing file: ' . $file->getRealPath());
             $parsedFile = Yaml::parseFile($file->getRealPath());
 
             $backupJob = null;
 
-            if (isset($parsedFile['mariadb'])) {
-                $output->writeln('Starting action for MySQL/MariaDB with profile: ' . $parsedFile['mariadb']['name']);
-                $backupJob = new MySqlBackup($parsedFile['mariadb']['name'], 'Backup', $parsedFile['mariadb']['source'], $parsedFile['mariadb']['target']['filesystem'] . DIRECTORY_SEPARATOR . $parsedFile['mariadb']['name'], strval($parsedFile['mariadb']['retention']['simple']['days']));
-                $messageSender = $this->messageSenderFactory->createMessageSender($parsedFile['mariadb']['notifications'], $backupJob);
-            } else if (isset($parsedFile['postgresql'])) {
-                $output->writeln('Starting action for postreSql with profile: ' . $parsedFile['postgresql']['name']);
-                $backupJob = new PostgreSqlBackup($parsedFile['postgresql']['name'], 'Backup', $parsedFile['postgresql']['source'], $parsedFile['postgresql']['target']['filesystem'] . DIRECTORY_SEPARATOR . $parsedFile['postgresql']['name'], strval($parsedFile['postgresql']['retention']['simple']['days']));
-                $messageSender = $this->messageSenderFactory->createMessageSender($parsedFile['postgresql']['notifications'], $backupJob);
+            if (isset($parsedFile['MariaDB'])) {
+                $profileName = $parsedFile['MariaDB']['name'];
+
+                $output->writeln(
+                    'Starting action for MySQL/MariaDB with profile: ' . $profileName
+                );
+
+                $source = $parsedFile['MariaDB']['source'];
+                $target = $parsedFile['MariaDB']['target'];
+                $retention = $parsedFile['MariaDB']['retention']['simple']['days'];
+
+                $backupJob = new MySqlBackup($profileName, 'Backup', $source, $target, $target[array_key_first($target)] . DIRECTORY_SEPARATOR . $profileName, strval($retention));
+
+                $messageSender = $this->messageSenderFactory->createMessageSender(
+                    $parsedFile['MariaDB']['notifications'], $backupJob
+                );
+            } else if (isset($parsedFile['PostgreSQL'])) {
+                $profileName = $parsedFile['PostgreSQL']['name'];
+
+                $output->writeln(
+                    'Starting action for PostgreSQL with profile: ' . $profileName
+                );
+
+                $source = $parsedFile['PostgreSQL']['source'];
+                $target = $parsedFile['PostgreSQL']['target'];
+                $retention = $parsedFile['PostgreSQL']['retention']['simple']['days'];
+
+                $backupJob = new PostgreSqlBackup($profileName, 'Backup', $source, $target, $target[array_key_first($target)] . DIRECTORY_SEPARATOR . $profileName, strval($retention));
+
+                $messageSender = $this->messageSenderFactory->createMessageSender(
+                    $parsedFile['PostgreSQL']['notifications'], $backupJob
+                );
             } else if (isset($parsedFile['local'])) {
-                $output->writeln('Starting action for local backup with profile: ' . $parsedFile['local']['name']);
-                $backupJob = new LocalBackup($parsedFile['local']['name'], 'Backup',$parsedFile['local']['source'], $parsedFile['local']['destination']['filesystem'] . DIRECTORY_SEPARATOR . $parsedFile['local']['name'], strval($parsedFile['local']['retention']['simple']['days']));
-                $messageSender = $this->messageSenderFactory->createMessageSender($parsedFile['local']['notifications'], $backupJob);
-            } else if (isset($parsedFile['scp'])) {
-                $output->writeln('Starting action for scp backup with profile: ' . $parsedFile['scp']['name']);
-                $backupJob = new SCPBackup($parsedFile['scp']['name'], 'Backup', $parsedFile['scp']['source'], $parsedFile['scp']['destination']['filesystem'] . DIRECTORY_SEPARATOR . $parsedFile['scp']['name'], strval($parsedFile['scp']['retention']['simple']['days']));
-                $messageSender = $this->messageSenderFactory->createMessageSender($parsedFile['scp']['notifications'], $backupJob);
+                $profileName = $parsedFile['local']['name'];
+
+                $output->writeln(
+                    'Starting action for local backup with profile: ' . $profileName
+                );
+                
+                $source = $parsedFile['local']['source'];
+                $target = $parsedFile['local']['target'];
+                $retention = $parsedFile['local']['retention']['simple']['days'];
+                
+                $backupJob = new LocalBackup($profileName, 'Backup', $source, $target, $target[array_key_first($target)] . DIRECTORY_SEPARATOR . $profileName, strval($retention));
+
+                $messageSender = $this->messageSenderFactory->createMessageSender(
+                    $parsedFile['local']['notifications'], $backupJob
+                );
+            } else if (isset($parsedFile['SCP'])) {
+                $profileName = $parsedFile['SCP']['name'];
+
+                $output->writeln(
+                    'Starting action for SCP backup with profile: ' . $profileName
+                );
+
+                $source = $parsedFile['SCP']['source'];
+                $target = $parsedFile['SCP']['target'];
+                $retention = $parsedFile['SCP']['retention']['simple']['days'];
+
+                $backupJob = new SCPBackup($profileName, 'Backup', $source, $target, $target[array_key_first($target)] . DIRECTORY_SEPARATOR . $profileName, strval($retention));
+
+                $messageSender = $this->messageSenderFactory->createMessageSender(
+                    $parsedFile['SCP']['notifications'], $backupJob
+                );
             } else {
-                throw new InvalidArgumentException('Unknown backup type');
+                throw new \InvalidArgumentException(
+                    'Unknown backup type'
+                );
             }
 
             $this->jobType = $backupJob->getType();
@@ -115,7 +167,7 @@ abstract class BaseCommand extends Command
             sleep($this->sleepTime);
         }
 
-        $this->endTime = new DateTime();
+        $this->endTime = new \DateTime();
 
         $message = PHP_EOL . 'Report Kopio run ' . $this->startTime->format('d-m-Y') . ' - ' . $this->endTime->format('d-m-Y') . ' on ' . gethostname() . PHP_EOL;
         $message .= PHP_EOL . 'run type: ' . $this->jobType . PHP_EOL;
@@ -133,22 +185,31 @@ abstract class BaseCommand extends Command
         }
 
         if (!empty($failedJobs)) {
-            $output->writeln(PHP_EOL . 'Failed to create ' . count($failedJobs) . ' of ' . $totalJobs .' backups:');
+            $output->writeln(
+                PHP_EOL . 'Failed to create ' . count($failedJobs) . ' of ' . $totalJobs .' backups:'
+            );
 
             $count = 1;
             foreach ($failedJobs as $job) {
-                $output->writeln($count . ' [' . $job->getType() . '] ' . $job->getName() . ' failed with exception: ' . $job->getException()->getMessage());
+                $output->writeln(
+                    $count . ' [' . $job->getType() . '] ' . $job->getName() . ' failed with exception: ' . $job->getException()->getMessage()
+                );
+                
                 $count = $count + 1;
             }
 
             $this->sendTeamsMessage($message);
             $this->sendEmail($message);
 
+            $output->write(PHP_EOL);
+
             return Command::FAILURE;
         }
 
         $this->sendTeamsMessage($message);
         $this->sendEmail($message);
+
+        $output->write(PHP_EOL);
 
         return Command::SUCCESS;
     }
@@ -173,11 +234,6 @@ abstract class BaseCommand extends Command
 
     protected function sendEmail($message): void
     {
-        $fileSystemAdapter = new LocalFilesystemAdapter('.');
-        $fileSystem = new Filesystem($fileSystemAdapter);
-        dd($fileSystem->listContents('./')->toArray());
-        // $fileSystem->listContents();
-
         try {
             $email = (new Email())
                 ->from($this->summaryMailSender)

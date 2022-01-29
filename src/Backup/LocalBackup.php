@@ -7,19 +7,18 @@ use App\Exception\BackupFailedException;
 use App\Exception\UnknownSourceException;
 use Symfony\Component\Filesystem\Filesystem;
 
-
 class LocalBackup extends AbstractBackup
 {
     private $tmpLocation;
     private $filesystem;
 
-    public function __construct(string $name, string $type, array $source, string $destination, string $retention)
+    public function __construct(string $name, string $type, array $source, array $target, string $destination, string $retention)
     {
-        parent::__construct($name, $type, $source, $destination, $retention);
+        parent::__construct($name, $type, $source, $target, $destination, $retention);
 
         $this->filesystem = new Filesystem();
         $this->keysToCheck = ['locations', 'tmp_location'];
-        $this->tmpLocation = rtrim($this->source['tmp_location'], '/') . DIRECTORY_SEPARATOR . $this->generateRandomString() . DIRECTORY_SEPARATOR;   
+        $this->tmpLocation = rtrim($this->source['tmp_location'], '/') . DIRECTORY_SEPARATOR . $this->generateRandomString() . DIRECTORY_SEPARATOR; 
     }
 
     public function checkSource(): void
@@ -28,7 +27,9 @@ class LocalBackup extends AbstractBackup
 
         foreach ($this->source['locations'] as $src) {
             if (!$this->filesystem->exists($src)) {
-                throw new UnknownSourceException('Source ' . $src . ' does not exist.');
+                throw new UnknownSourceException(
+                    '[ERROR] Source ' . $src . ' does not exist'
+                );
             }
         }
     }
@@ -39,8 +40,10 @@ class LocalBackup extends AbstractBackup
             $command = 'cp -r ' . rtrim($src, '/') . DIRECTORY_SEPARATOR . '* ' . $this->tmpLocation;
             system($command, $return);
 
-            if ($return != 0) {
-                throw new BackupFailedException('Failed to create local backup for source: ' . $src . 'width error code ' . $return);
+            if ($return !== 0) {
+                throw new BackupFailedException(
+                    '[ERROR] Failed to create local backup for source: ' . $src . ' with error code ' . $return
+                );
             }
         }
     }
@@ -50,17 +53,19 @@ class LocalBackup extends AbstractBackup
         $currentDir = getcwd();
         chdir($this->tmpLocation);
 
-        $command = "tar -cvf " . $this->destination . DIRECTORY_SEPARATOR . date("YmdHis") . ".tar *";
+        $command = 'tar -cvf ' . $this->destination . DIRECTORY_SEPARATOR . date('YmdHis') . '.tar *';
         system($command, $return);
 
         chdir($currentDir);
 
-        if ($return != 0) {
-            throw new BackupFailedException('Failed to copy files from tmp directory: ' . $this->source['tmp_location'] . 'width error code ' . $return);
+        if ($return !== 0) {
+            throw new BackupFailedException(
+                '[ERROR] Failed to copy files from temporary directory: ' . $this->source['tmp_location'] . ' with error code ' . $return
+            );
         }
     }
 
-    public function deleteTmpLocation()
+    public function deleteTmpLocation(): void
     {
         $this->filesystem->remove($this->tmpLocation);
     }
