@@ -8,28 +8,7 @@ if (true === (require_once __DIR__.'/autoload.php') || null === $scriptFileName 
     return;
 }
 
-////// fix for missing Phar class
-echo 'Loaded INI file: ' . php_ini_loaded_file() . PHP_EOL;
-echo 'Scanned INI files: ' . php_ini_scanned_files() . PHP_EOL;
-echo 'ENV dump: ' . PHP_EOL;
-print_r($_ENV);
-print_r(getenv());
-$pharPath = '';
-if (class_exists('Phar', false)) {
-    $pharPath = Phar::running();
-} else {
-    echo 'Phar class not found, declared classes:' . PHP_EOL;
-    print_r(get_declared_classes());
-    echo 'PHP version:' . PHP_EOL;
-    print_r(phpversion());
-    echo 'Loaded extension:' . PHP_EOL;
-    print_r(get_loaded_extensions());
-}
-////// end
-
-////// dump info about paths
-var_dump($pharPath, $scriptFileName);
-////// end
+$pharPath = Phar::running();
 
 if (strlen($pharPath) > 0 && !str_starts_with($scriptFileName, 'phar://')) {
     $scriptFileName = $pharPath.DIRECTORY_SEPARATOR.$scriptFileName;

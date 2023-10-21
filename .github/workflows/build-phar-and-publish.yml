@@ -1,20 +1,19 @@
-name: Build PHAR
+name: Build PHAR and publish
 
 on:
   push:
     branches: [ "main" ]
+  release:
+    types: [ created ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
-
     - name: Cache Composer packages
       id: composer-cache
       uses: actions/cache@v3
@@ -23,43 +22,42 @@ jobs:
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
         restore-keys: |
           ${{ runner.os }}-php-
-
     - name: Download Box
       run: wget https://github.com/box-project/box/releases/download/4.4.0/box.phar
-
     - name: Set phar.readonly=0
       run: sudo sh -c 'echo "phar.readonly=0" > /etc/php/8.1/cli/conf.d/99-phar.ini'
-
-    ### Debug
-
-    - name: "Debug: show system env vars"
-      run: export
-
-    - name: Run phpinfo
-      run: php -i
-
-    ### Prepare for boxing
-
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
-
-    - name: Dump system envs to PHP via composer
+    - name: Dump envs via composer
       run: composer dump-env prod
-
+    - name: Remove dev cache
+      run: rm -Rf var/cache/dev
     - name: Cache warmup
       run: php new-bin/console cache:warmup
-
-    ### Box it
-
     - name: Run Box
       env:
+        # see https://github.com/box-project/box/issues/988
         BOX_ALLOW_XDEBUG: '1'
-      run: php box.phar compile -v
-
-    ### Post boxing actions
-
+      run: php box.phar compile
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
         name: kopio.phar
         path: build/kopio.phar
+  upload_release:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    if: github.event_name == 'release'
+    steps:
+      - name: Download artifact from build step
+        uses: actions/download-artifact@v3
+        with:
+          name: kopio.phar
+          path: .
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            kopio.phar
