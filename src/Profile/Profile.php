@@ -36,7 +36,7 @@ class Profile
             TargetFactory::fromArray($data['target']),
             RetentionFactory::fromArray($data['retention']),
             NotificationFactory::fromArray($data['notifications']),
-            $data['log']
+            $data['log'] ?? null
         );
     }
 }

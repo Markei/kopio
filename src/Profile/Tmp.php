@@ -16,6 +16,8 @@ class Tmp
 
     public static function fromArray(array $data): self
     {
+        $data['mode'] = $data['mode'] ?? '0777';
+
         return new self($data['path'], intval($data['mode']));
     }
 }

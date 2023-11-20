@@ -50,7 +50,9 @@ class CleanUpCommand extends BaseCommand
                     if (file_exists(dirname($profile->logFile)) === false) {
                         mkdir(dirname($profile->logFile), 0777, true);
                     }
-                    $profileLogger = $profileLogger->withStream(fopen($profile->logFile, 'a'));
+                    if ($profile->logFile) {
+                        $profileLogger = $profileLogger->withStream(fopen($profile->logFile, 'a'));
+                    }
                 }
 
                 try {
