@@ -100,7 +100,12 @@ class BackupCommand extends BaseCommand
                     $this->sendNotifications($profileLogger, $profile, $runId, AbstractNotification::ON_SUCCESS, $metaData);
                     $profileLogger->info('Notifications send', []);
                 } catch (\Exception $e) {
-                    $profileLogger->info('Profile failed, start sending notifications', []);
+                    $profileLogger->info('Profile failed, start sending notifications', [
+                        'e' => get_class($e),
+                        'msg' => $e->getMessage(),
+                        'file' => $e->getFile() . ':' . $e->getLine(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
                     $this->sendNotifications($baseLogger, $profile, $runId, AbstractNotification::ON_FAILURE, [
                         'e' => get_class($e),
                         'msg' => $e->getMessage(),
