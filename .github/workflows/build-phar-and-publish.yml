@@ -61,3 +61,8 @@ jobs:
         with:
           files: |
             kopio.phar
+      - name: Deploy to Azure
+        uses: TravisSpomer/deploy-to-azure-storage@v1.5.0
+        with:
+          source-path: kopio.phar
+          sas-url: ${{ secrets.DEPLOY_SAS_URL }}
