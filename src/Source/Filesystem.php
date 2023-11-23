@@ -42,7 +42,8 @@ class Filesystem implements SourceInterface
             $command[] = '--gzip';
             //$command[] = '--verbose';
             $command[] = '--file=' . $filename;
-            $command[] = $location->path;
+            $command[] = '--directory=' . dirname($location->path);
+            $command[] = basename($location->path);
 
             $process = new Process($command, $this->tmpPath, timeout: 300);
             $logger->debug('Internal executable command', ['line' => $process->getCommandLine()]);
@@ -50,8 +51,12 @@ class Filesystem implements SourceInterface
                 $logger->debug('Internal executable output', ['type' => $type, 'buffer' => $buffer]);
             });
             if ($process->isSuccessful() === false) {
-                $logger->error('Internal executable exit code', ['code' => $process->getExitCode()]);
-                throw new RuntimeException('Source failed during internal executable run');
+                if ($process->getExitCode() === 1) {
+                    $logger->error('Warnings during backup, continue');
+                } else {
+                    $logger->error('Internal executable exit code', ['code' => $process->getExitCode()]);
+                    throw new RuntimeException('Source failed during internal executable run');
+                }
             }
 
             $filenames[$filename] = $location->name . '.tar.gz';
