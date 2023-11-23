@@ -58,6 +58,7 @@ Use cron to automate the execution of backups and cleanups.
         # add one of the possible targets
         filesystem:
             path:
+            useCopy: false
         sftp:
             host:
             port:

@@ -38,10 +38,18 @@ class Filesystem implements TargetInterface
         $fs->mkdir($this->config->path . DIRECTORY_SEPARATOR . $this->runId);
 
         foreach ($files as $tmpFile => $fileName) {
-            $fs->rename(
-                $tmpPath . DIRECTORY_SEPARATOR . $tmpFile,
-                $this->config->path . DIRECTORY_SEPARATOR . $this->runId . DIRECTORY_SEPARATOR . $fileName
-            );
+            if ($this->config->useCopy) {
+                $fs->copy(
+                    $tmpPath . DIRECTORY_SEPARATOR . $tmpFile,
+                    $this->config->path . DIRECTORY_SEPARATOR . $this->runId . DIRECTORY_SEPARATOR . $fileName
+                );
+                $fs->remove($tmpPath . DIRECTORY_SEPARATOR . $tmpFile);
+            } else {
+                $fs->rename(
+                    $tmpPath . DIRECTORY_SEPARATOR . $tmpFile,
+                    $this->config->path . DIRECTORY_SEPARATOR . $this->runId . DIRECTORY_SEPARATOR . $fileName
+                );
+            }
         }
     }
 

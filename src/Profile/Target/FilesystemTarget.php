@@ -9,14 +9,19 @@ use App\Profile\AbstractTarget;
 class FilesystemTarget extends AbstractTarget
 {
     public function __construct(
-        public readonly string $path
+        public readonly string $path,
+        public readonly bool $useCopy
     )
     {
     }
 
     public static function fromArray(array $data): self
     {
-        return new self($data['path']);
+        if (isset($data['useCopy']) === false) {
+            $data['useCopy'] = false;
+        }
+
+        return new self($data['path'], $data['useCopy']);
     }
 
     public function getExecutorClass(): string
