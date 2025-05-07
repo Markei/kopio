@@ -13,10 +13,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Cache Composer packages
       id: composer-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -40,7 +40,7 @@ jobs:
         #BOX_ALLOW_XDEBUG: '1'
       run: php box.phar compile
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: kopio.phar
         path: build/kopio.phar
@@ -51,7 +51,7 @@ jobs:
     if: github.event_name == 'release'
     steps:
       - name: Download artifact from build step
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kopio.phar
           path: .
