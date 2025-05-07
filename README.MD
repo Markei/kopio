@@ -27,6 +27,7 @@ Use cron to automate the execution of backups and cleanups.
             password:
             database:
             executable:
+            enableSsl:
         postgresql:
             host:
             port:
