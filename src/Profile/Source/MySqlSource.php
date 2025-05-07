@@ -14,7 +14,8 @@ class MySqlSource extends AbstractSource
         public readonly string $username,
         public readonly string $password,
         public readonly string $database,
-        public readonly string $executable
+        public readonly string $executable,
+        public readonly bool $enableSsl
     )
     {
     }
@@ -35,7 +36,8 @@ class MySqlSource extends AbstractSource
             $data['username'],
             $data['password'],
             $data['database'],
-            $data['executable']
+            $data['executable'],
+            array_key_exists('enableSsl', $data) ? $data['enableSsl'] : false
         );
     }
 

@@ -40,6 +40,9 @@ class MySql implements SourceInterface
         if ($this->config->password) {
             $command[] = '--password=' . $this->config->password;
         }
+        if ($this->config->enableSsl) {
+            $command[] = '--ssl';
+        }
         $command[] = '--result-file=' . $filename;
         $command[] = $this->config->database;
 
